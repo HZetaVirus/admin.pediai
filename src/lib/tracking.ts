@@ -1,60 +1,68 @@
-export interface TrackingData {
-  fbc?: string;
-  fbp?: string;
-  userAgent?: string;
-}
+export const GA_MEASUREMENT_ID = 'G-B8T727YS55';
 
-const STORAGE_KEY = 'pediai_tracking';
-
-export function captureTrackingData() {
-  if (typeof window === 'undefined') return;
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const fbclid = urlParams.get('fbclid');
-  const gclid = urlParams.get('gclid');
-
-  let currentData: any = {};
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) currentData = JSON.parse(stored);
-  } catch (e) {
-    console.error('Error parsing stored tracking data', e);
+export const pageview = (url: string) => {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('config', GA_MEASUREMENT_ID, {
+      page_path: url,
+    });
   }
+};
 
-  // Handle FBC (Facebook Click ID)
-  if (fbclid) {
-    const creationTime = Date.now();
-    currentData.fbc = `fb.1.${creationTime}.${fbclid}`;
+export const event = ({ action, category, label, value }: any) => {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    });
   }
+};
 
-  // Handle GCLID (Google Click ID) - optional but useful
-  if (gclid) {
-    currentData.gclid = gclid;
-  }
+// Helper to get GA Cookies for Server-Side Tracking
+export const getGATrackingData = () => {
+  if (typeof document === 'undefined') return null;
 
-  // Handle FBP (Facebook Browser ID)
-  // Look for the cookie set by the FB Pixel if it exists
-  const fbpCookie = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('_fbp='));
+  const getCookie = (name: string) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return null;
+  };
+
+  // _ga (Client ID) -> GA1.1.CLIENT_ID
+  // _ga_XXXXXXXX (Session ID) -> GS1.1.SESSION_ID...
   
-  if (fbpCookie) {
-    currentData.fbp = fbpCookie.split('=')[1];
-  }
-
-  // Always update User Agent
-  currentData.userAgent = navigator.userAgent;
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-}
-
-export function getTrackingData(): TrackingData {
-  if (typeof window === 'undefined') return {};
+  const clientIdCookie = getCookie('_ga');
   
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch (e) {
-    return {};
+  // Find the session cookie (starts with _ga_)
+  const cookies = document.cookie.split(';').map(c => c.trim());
+  const sessionCookieName = cookies.find(c => c.startsWith(`_ga_${GA_MEASUREMENT_ID.replace('G-', '')}`))?.split('=')[0];
+  const sessionIdCookie = sessionCookieName ? getCookie(sessionCookieName) : null;
+
+  let client_id = null;
+  let session_id = null;
+
+  if (clientIdCookie) {
+    // Format: GA1.1.123456789.123456789 (version.level.cid.cid) or just cid.cid
+    const parts = clientIdCookie.split('.');
+    if (parts.length >= 3) {
+       // Typically GA1.1.956829379.1738520000
+       client_id = parts.slice(2).join('.');
+    } else {
+       client_id = clientIdCookie;
+    }
   }
-}
+
+  if (sessionIdCookie) {
+    // Format: GS1.1.123456789.1.1.123456789.0.0.0
+    const parts = sessionIdCookie.split('.');
+    if (parts.length >= 3) {
+      session_id = parts[2];
+    }
+  }
+
+  return {
+    client_id,
+    session_id
+  };
+};
