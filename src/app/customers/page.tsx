@@ -66,6 +66,123 @@ export default function CustomersPage() {
     fetchStore();
   }, [fetchCustomers]);
 
+  const handleSyncApp = async () => {
+    if (!store) return;
+    setSyncing(true);
+    try {
+      // 1. Fetch all orders for this store with profiles
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          user_id,
+          total,
+          created_at,
+          profiles:user_id (
+            full_name,
+            phone,
+            email
+          )
+        `)
+        .eq('store_id', store.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!orders || orders.length === 0) {
+        alert("Nenhum pedido encontrado para sincronizar.");
+        setSyncing(false);
+        return;
+      }
+
+      console.log(`Analyzing ${orders.length} orders...`);
+      let newCount = 0;
+      let updateCount = 0;
+
+      // Group orders by user_id to aggregate stats
+      const userStats = new Map<string, { 
+        totalOrders: number, 
+        totalSpent: number, 
+        lastInteraction: string,
+        profile: { full_name: string | null; phone: string | null; email: string | null }
+      }>();
+
+      for (const order of orders) {
+        if (!order.user_id || !order.profiles) continue;
+        
+        // Cast profiles to expected type since Supabase join returns it as single object or array depending on relation, here it's single
+        const profileData = order.profiles as unknown as { full_name: string | null; phone: string | null; email: string | null };
+
+        const existing = userStats.get(order.user_id) || { 
+          totalOrders: 0, 
+          totalSpent: 0, 
+          lastInteraction: order.created_at,
+          profile: profileData
+        };
+
+        existing.totalOrders += 1;
+        existing.totalSpent += order.total;
+        // Keep the latest date
+        if (new Date(order.created_at) > new Date(existing.lastInteraction)) {
+          existing.lastInteraction = order.created_at;
+        }
+
+        userStats.set(order.user_id, existing);
+      }
+
+      // Process each unique user
+      for (const [userId, stats] of userStats.entries()) {
+        const { full_name, phone, email } = stats.profile;
+        if (!phone) continue; // Phone is required for unique constraint usually, or helps dedupe
+
+        // Check if customer exists by phone (primary key for our unification) or profile_id
+        const { data: existingCustomer } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('store_id', store.id)
+          .or(`phone.eq.${phone},profile_id.eq.${userId}`)
+          .maybeSingle();
+
+        if (existingCustomer) {
+           // Update stats
+           await supabase
+             .from('customers')
+             .update({
+               total_orders: stats.totalOrders,
+               total_spent: stats.totalSpent,
+               last_interaction: stats.lastInteraction,
+               profile_id: userId // Ensure link
+             })
+             .eq('id', existingCustomer.id);
+           updateCount++;
+        } else {
+          // Insert new
+          await supabase
+            .from('customers')
+            .insert({
+              store_id: store.id,
+              profile_id: userId,
+              full_name: full_name || "Cliente App",
+              phone: phone,
+              email: email,
+              source: 'app_menu',
+              total_orders: stats.totalOrders,
+              total_spent: stats.totalSpent,
+              last_interaction: stats.lastInteraction
+            });
+          newCount++;
+        }
+      }
+
+      alert(`Sincronização App concluída!\nNovos: ${newCount}\nAtualizados: ${updateCount}`);
+      fetchCustomers(store.id);
+
+    } catch (err) {
+      console.error("Sync App error:", err);
+      alert("Erro ao sincronizar do App.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleSyncWhatsApp = async () => {
     if (!store) return;
     setSyncing(true);
@@ -159,14 +276,22 @@ export default function CustomersPage() {
              <button 
               onClick={handleSyncWhatsApp}
               disabled={syncing || !store}
-              className="flex items-center gap-2 px-6 py-3 bg-green-50 text-green-700 font-bold rounded-2xl border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-green-50 text-green-700 font-bold rounded-2xl border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 text-xs md:text-sm"
             >
               <Download size={18} className={syncing ? "animate-bounce" : ""} />
-              {syncing ? "Sincronizando..." : "Importar do WhatsApp"}
+              {syncing ? "WhatsApp..." : "WhatsApp"}
             </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95">
+            <button 
+              onClick={handleSyncApp}
+              disabled={syncing || !store}
+              className="flex items-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-2xl border border-blue-100 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50 text-xs md:text-sm"
+            >
+              <Smartphone size={18} className={syncing ? "animate-bounce" : ""} />
+              {syncing ? "App..." : "App / Menu"}
+            </button>
+            <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95 text-xs md:text-sm">
               <UserPlus size={18} />
-              Novo Cliente
+              Novo
             </button>
           </div>
         </header>
