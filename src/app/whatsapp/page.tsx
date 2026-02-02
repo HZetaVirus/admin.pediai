@@ -24,7 +24,6 @@ import {
   Eraser,
   Trash2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { whatsappService } from "@/services/whatsappService";
 import Image from "next/image";
 
@@ -56,9 +55,6 @@ export default function WhatsAppPage() {
   const [isConnected, setIsConnected] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [qrCode, setQrCode] = React.useState<string | null>(null);
-  const [pairingMode, setPairingMode] = React.useState<'qr' | 'number'>('qr');
-  const [phoneNumber, setPhoneNumber] = React.useState("");
-  const [pairingCode, setPairingCode] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [serverError, setServerError] = React.useState<string | null>(null);
   const headerMenuRef = React.useRef<HTMLDivElement>(null);
@@ -149,28 +145,6 @@ export default function WhatsAppPage() {
     }
   }, [selectedChat, loadMessages]);
 
-  const handleRequestPairingCode = async () => {
-    if (!phoneNumber) return alert("Digite o número do celular com o código do país (ex: 5511999999999)");
-    setPairingCode(null);
-    const code = await whatsappService.getPairingCode(phoneNumber);
-    if (code) {
-      setPairingCode(code);
-    } else {
-      alert("Erro ao gerar código de pareamento. Tente o 'Reset Total' se o problema persistir.");
-    }
-  };
-
-  const handleFullReset = async () => {
-    if (window.confirm("Isso apagará a instância atual e tentará criar uma nova. Deseja continuar?")) {
-      setIsLoading(true);
-      await whatsappService.deleteInstance();
-      setQrCode(null);
-      setPairingCode(null);
-      await checkConnection();
-      setIsLoading(false);
-    }
-  };
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !selectedChat) return;
@@ -253,75 +227,24 @@ export default function WhatsAppPage() {
                       <div>
                         <p className="mb-1">Falha no Servidor:</p>
                         <p className="opacity-80 font-medium">{serverError}</p>
-                        <p className="mt-2 text-[10px] text-red-500 uppercase tracking-wider">Tente o Reset Total abaixo</p>
                       </div>
                     </div>
                   )}
 
                   <p className="text-slate-500 font-medium leading-relaxed">
-                    Escolha como deseja conectar: via QR Code ou código por número.
+                    Escaneie o QR Code ao lado para conectar seu WhatsApp e começar os atendimentos.
                   </p>
                 </div>
 
                 <div className="flex bg-slate-50 p-1.5 rounded-2xl w-fit border border-slate-100">
-                  <button 
-                    onClick={() => { setPairingMode('qr'); setPairingCode(null); }}
-                    className={`px-6 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${pairingMode === 'qr' ? 'bg-white text-primary shadow-sm border border-slate-100' : 'text-slate-400 opacity-60'}`}
-                  >
+                  <div className="px-6 py-3 rounded-xl text-xs font-black bg-white text-primary shadow-sm border border-slate-100 flex items-center gap-2">
                     <QrCode size={14} />
                     QR CODE
-                  </button>
-                  <button 
-                    onClick={() => { setPairingMode('number'); setQrCode(null); }}
-                    className={`px-6 py-3 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${pairingMode === 'number' ? 'bg-white text-primary shadow-sm border border-slate-100' : 'text-slate-400 opacity-60'}`}
-                  >
-                    <MessageSquare size={14} />
-                    NÚMERO DE CELULAR
-                  </button>
+                  </div>
                 </div>
 
-                <AnimatePresence mode="wait">
-                  {pairingMode === 'number' && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="space-y-4"
-                    >
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Seu Número</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                            placeholder="5521999999999"
-                            className="flex-1 px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
-                          />
-                          <button 
-                            onClick={handleRequestPairingCode}
-                            className="px-8 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest"
-                          >
-                            Gerar
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-medium pl-1 italic">Inclua o código do país (Brasil: 55)</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 <div className="pt-8 border-t border-slate-50 flex items-center justify-between">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">ID: {whatsappService.getInstanceName()}</span>
-                    <button 
-                      onClick={handleFullReset}
-                      className="text-primary font-black text-xs hover:underline text-left uppercase tracking-tighter"
-                    >
-                      🔄 Reset Total da Conexão
-                    </button>
-                  </div>
-                  <div className="text-right">
+                  <div className="text-right ml-auto">
                     <p className="text-slate-300 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Status do Motor</p>
                     <div className="flex items-center gap-2 text-green-500 text-[10px] font-black uppercase tracking-widest">
                       <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
@@ -334,49 +257,26 @@ export default function WhatsAppPage() {
               <div className="bg-slate-50/50 p-12 flex flex-col items-center justify-center text-center space-y-8 border-l border-slate-50 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-30" />
                 
-                {pairingMode === 'number' && pairingCode ? (
-                  <div className="space-y-8 relative z-10">
-                    <div className="grid grid-cols-4 gap-3 max-w-[280px] mx-auto">
-                      {pairingCode.replace(/-/g, '').split('').map((char, i) => (
-                        <div key={i} className="w-12 h-16 bg-white border-2 border-primary/20 rounded-xl flex items-center justify-center text-2xl font-black text-primary shadow-xl shadow-primary/5">
-                          {char}
-                        </div>
-                      ))}
+                <div className="relative p-8 bg-white rounded-[48px] shadow-2xl shadow-slate-200/50 group border border-white relative z-10 transition-transform hover:scale-105 duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent rounded-[48px]" />
+                  {qrCode ? (
+                    <Image 
+                      src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                      alt="QR Code"
+                      width={240}
+                      height={240}
+                      className="relative z-10 rounded-2xl"
+                    />
+                  ) : (
+                    <div className="w-[240px] h-[240px] flex items-center justify-center bg-slate-50 rounded-2xl">
+                      <QrCode size={120} className="text-slate-100 opacity-50 animate-pulse" />
                     </div>
-                    <div className="space-y-3">
-                      <p className="text-xs font-black text-slate-800 uppercase tracking-[0.3em]">CÓDIGO DE PAREAMENTO</p>
-                      <p className="text-[10px] text-slate-400 font-bold leading-relaxed px-6">
-                        Digite este código no seu WhatsApp em <br/><b>Aparelhos Conectados {'>'} Conectar com número</b>
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="relative p-8 bg-white rounded-[48px] shadow-2xl shadow-slate-200/50 group border border-white relative z-10 transition-transform hover:scale-105 duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent rounded-[48px]" />
-                      {qrCode ? (
-                        <Image 
-                          src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
-                          alt="QR Code"
-                          width={240}
-                          height={240}
-                          className="relative z-10 rounded-2xl"
-                        />
-                      ) : (
-                        <div className="w-[240px] h-[240px] flex items-center justify-center bg-slate-50 rounded-2xl">
-                          <QrCode size={120} className="text-slate-100 opacity-50 animate-pulse" />
-                        </div>
-                      )}
-                      <div className="absolute -top-4 -right-4 w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/30 z-20 transition-transform group-hover:scale-110 group-hover:rotate-6">
-                        <MessageCircle size={28} />
-                      </div>
-                    </div>
-                    <div className="space-y-2 relative z-10">
-                      <p className="text-xs font-black text-primary uppercase tracking-[0.4em] ml-1">Escaneie Agora</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">O código atualiza periodicamente</p>
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <p className="text-xs font-black text-primary uppercase tracking-[0.4em] ml-1">Escaneie Agora</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">O código atualiza periodicamente</p>
+                </div>
               </div>
             </div>
           </Card>
