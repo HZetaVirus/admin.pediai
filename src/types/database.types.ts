@@ -132,6 +132,66 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: number
+          last_interaction: string | null
+          notes: string | null
+          phone: string | null
+          profile_id: string | null
+          source: string | null
+          store_id: number
+          total_orders: number | null
+          total_spent: number | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: never
+          last_interaction?: string | null
+          notes?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          source?: string | null
+          store_id: number
+          total_orders?: number | null
+          total_spent?: number | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: never
+          last_interaction?: string | null
+          notes?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          source?: string | null
+          store_id?: number
+          total_orders?: number | null
+          total_spent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       option_groups: {
         Row: {
           created_at: string
@@ -177,25 +237,25 @@ export type Database = {
         Row: {
           created_at: string
           id: number
-          order_id: bigint | null
+          order_id: number | null
           price: number
-          product_id: bigint | null
+          product_id: number | null
           quantity: number
         }
         Insert: {
           created_at?: string
           id?: number
-          order_id?: bigint | null
+          order_id?: number | null
           price: number
-          product_id?: bigint | null
+          product_id?: number | null
           quantity: number
         }
         Update: {
           created_at?: string
           id?: number
-          order_id?: bigint | null
+          order_id?: number | null
           price?: number
-          product_id?: bigint | null
+          product_id?: number | null
           quantity?: number
         }
         Relationships: [
@@ -233,28 +293,28 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
-          id: bigint
-          payment_type_id: bigint | null
+          id: number
+          payment_type_id: number | null
           status_id: number | null
-          store_id: bigint | null
+          store_id: number | null
           total: number
           user_id: string | null
         }
         Insert: {
           created_at?: string
-          id?: bigint
-          payment_type_id?: bigint | null
+          id?: number
+          payment_type_id?: number | null
           status_id?: number | null
-          store_id?: bigint | null
+          store_id?: number | null
           total: number
           user_id?: string | null
         }
         Update: {
           created_at?: string
-          id?: bigint
-          payment_type_id?: bigint | null
+          id?: number
+          payment_type_id?: number | null
           status_id?: number | null
-          store_id?: bigint | null
+          store_id?: number | null
           total?: number
           user_id?: string | null
         }
@@ -277,7 +337,7 @@ export type Database = {
             foreignKeyName: "orders_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {

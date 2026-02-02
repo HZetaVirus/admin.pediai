@@ -100,7 +100,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       title: "RELATÓRIOS",
       items: [
         { icon: <TrendingUp size={20} />, label: "Vendas", href: "/sales" },
-        { icon: <Users size={20} />, label: "Clientes", href: "/clients" },
+        { icon: <Users size={20} />, label: "Clientes", href: "/customers" },
       ]
     },
     {
