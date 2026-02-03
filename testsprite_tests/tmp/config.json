@@ -1,0 +1,17 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "executionArgs": {
+    "projectName": "admin.pediai",
+    "projectPath": "c:\\Users\\jefer\\Documents\\admin.pediai",
+    "testIds": [],
+    "additionalInstruction": "Test the main dashboard functionality, stats visibility, and navigation. Ensure the login flow works if required.",
+    "envs": {
+      "API_KEY": "sk-user-_f39X7XxAlA-L2_ENtauzLuZIZa5Ln_ST6nY8ke2fJ4P1_5I0EuDjD1DozODk80jeKRry6VQ-fbNn400Falcq5IbGDL5hFfQHuUDW0hPHDSPl21hB2j1_Hp4G7fPrbnrdHc"
+    }
+  },
+  "serverPort": 54515,
+  "proxy": "http://61a04360-5818-46cb-80ee-3dcb346cfe1c:eG2xVkXtsuBkVjkkGd8ZtrirXO9YaH0T@tun.testsprite.com:8080"
+}

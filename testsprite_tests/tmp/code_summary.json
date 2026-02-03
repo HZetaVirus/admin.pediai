@@ -1,0 +1,53 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js (App Router)",
+    "Tailwind CSS",
+    "Supabase",
+    "Framer Motion",
+    "Radix UI",
+    "Lucide React"
+  ],
+  "features": [
+    {
+      "name": "Dashboard",
+      "description": "Main overview screen showing sales stats, order charts, and recent activity.",
+      "files": ["src/app/page.tsx"]
+    },
+    {
+      "name": "Authentication",
+      "description": "User login and access control functionality.",
+      "files": ["src/app/login/page.tsx", "src/app/login/layout.tsx"]
+    },
+    {
+      "name": "Order Management",
+      "description": "Real-time order tracking and management system.",
+      "files": ["src/app/orders/page.tsx"]
+    },
+    {
+      "name": "Menu Management",
+      "description": "Product and category management for the store.",
+      "files": ["src/app/menu/page.tsx", "src/app/categories/page.tsx"]
+    },
+    {
+      "name": "Sales & Reports",
+      "description": "Financial tracking, sales history, and CMV analysis.",
+      "files": ["src/app/sales/page.tsx", "src/app/reports/page.tsx", "src/app/reports/cmv/page.tsx"]
+    },
+    {
+      "name": "WhatsApp Integration",
+      "description": "Store connection and message automation for WhatsApp.",
+      "files": ["src/app/whatsapp/page.tsx", "src/app/whatsapp/connection/page.tsx"]
+    },
+    {
+      "name": "Customer Directory",
+      "description": "Management of customer profiles and order history.",
+      "files": ["src/app/customers/page.tsx"]
+    },
+    {
+      "name": "Layout System",
+      "description": "Shared application structure and sidebars.",
+      "files": ["src/components/layout/AppLayout.tsx", "src/app/layout.tsx"]
+    }
+  ]
+}

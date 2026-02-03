@@ -13,18 +13,10 @@ import {
   CheckCheck,
   MessageCircle,
   QrCode,
-  Info,
-  CheckSquare,
-  BellOff,
-  Clock,
-  Heart,
-  XCircle,
-  ThumbsDown,
-  Ban,
-  Eraser,
-  Trash2
+  XCircle
 } from "lucide-react";
 import { whatsappService } from "@/services/whatsappService";
+import { DesktopOnly } from "@/components/layout/DesktopOnly";
 import Image from "next/image";
 
 interface Chat {
@@ -49,15 +41,11 @@ export default function WhatsAppPage() {
   const [selectedChat, setSelectedChat] = React.useState<Chat | null>(null);
   const [message, setMessage] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState("Tudo");
-  const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
-  const [showHeaderMenu, setShowHeaderMenu] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isConnected, setIsConnected] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [qrCode, setQrCode] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [serverError, setServerError] = React.useState<string | null>(null);
-  const headerMenuRef = React.useRef<HTMLDivElement>(null);
   const [chats, setChats] = React.useState<Chat[]>([]);
   const [chatMessages, setChatMessages] = React.useState<Record<string, Message[]>>({});
 
@@ -70,8 +58,8 @@ export default function WhatsAppPage() {
   }, []);
 
   const loadChats = React.useCallback(async () => {
-    const apiChats: any[] = await whatsappService.getChats();
-    const mappedChats: Chat[] = apiChats.map((c: any) => ({
+    const apiChats: { remoteJid: string, name?: string, unreadCount?: number, lastMessage?: any }[] = await whatsappService.getChats();
+    const mappedChats: Chat[] = apiChats.map((c) => ({
       id: c.remoteJid,
       name: c.name || c.remoteJid.split('@')[0],
       lastMsg: c.lastMessage?.message?.conversation || "Sem mensagens",
@@ -84,8 +72,8 @@ export default function WhatsAppPage() {
   }, []);
 
   const loadMessages = React.useCallback(async (remoteJid: string) => {
-    const apiMsgs: any[] = await whatsappService.getMessages(remoteJid);
-    const mappedMsgs: Message[] = apiMsgs.map((m: any) => {
+    const apiMsgs: { key: { id: string, fromMe: boolean }, messageTimestamp: number, message?: any }[] = await whatsappService.getMessages(remoteJid);
+    const mappedMsgs: Message[] = apiMsgs.map((m) => {
       const isMe = m.key.fromMe;
       return {
         id: m.key.id,
@@ -170,11 +158,6 @@ export default function WhatsAppPage() {
     if (e.target.files?.[0]) alert(`Simulando envio de: ${e.target.files[0].name}`);
   };
 
-  const addEmoji = (emoji: string) => {
-    setMessage(prev => prev + emoji);
-    setShowEmojiPicker(false);
-  };
-
   const filteredChats = chats.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (activeFilter === "Tudo" || (activeFilter === "Não lidas" && c.unread > 0) || (activeFilter === "Grupos" && c.isGroup))
@@ -183,21 +166,23 @@ export default function WhatsAppPage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="h-screen flex items-center justify-center bg-slate-50/50">
-          <div className="text-center space-y-6">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 border-4 border-slate-100 rounded-full" />
-              <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <MessageCircle className="text-primary" size={32} />
+        <DesktopOnly>
+          <div className="h-screen flex items-center justify-center bg-slate-50/50">
+            <div className="text-center space-y-6">
+              <div className="relative w-20 h-20 mx-auto">
+                <div className="absolute inset-0 border-4 border-slate-100 rounded-full" />
+                <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <MessageCircle className="text-primary" size={32} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold text-slate-800">PediAI WhatsApp</h2>
+                <p className="text-slate-500 font-medium tracking-tight">Verificando sua conexão...</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-slate-800">PediAI WhatsApp</h2>
-              <p className="text-slate-500 font-medium tracking-tight">Verificando sua conexão...</p>
-            </div>
           </div>
-        </div>
+        </DesktopOnly>
       </AppLayout>
     );
   }
@@ -205,7 +190,8 @@ export default function WhatsAppPage() {
   if (!isConnected) {
     return (
       <AppLayout>
-        <div className="py-8 px-4 h-[calc(100vh-100px)] flex items-center justify-center">
+        <DesktopOnly>
+          <div className="py-8 px-4 h-[calc(100vh-100px)] flex items-center justify-center">
           <Card className="w-full max-w-[1040px] border-none shadow-2xl bg-white rounded-[40px] overflow-hidden">
             <div className="grid md:grid-cols-2 gap-0 items-stretch">
               <div className="p-12 space-y-10">
@@ -281,13 +267,15 @@ export default function WhatsAppPage() {
             </div>
           </Card>
         </div>
-      </AppLayout>
+      </DesktopOnly>
+    </AppLayout>
     );
   }
 
   return (
     <AppLayout>
-      <div className="py-8 px-4 h-[calc(100vh-100px)] flex items-center justify-center">
+      <DesktopOnly>
+        <div className="py-8 px-4 h-[calc(100vh-100px)] flex items-center justify-center">
         <Card className="w-full max-w-[1240px] h-full max-h-[820px] border-none shadow-2xl bg-white rounded-[40px] overflow-hidden flex transform transition-all">
           <div className="w-full md:w-[380px] border-r border-slate-100 flex flex-col bg-slate-50/30">
             <header className="p-6 space-y-4 bg-white">
@@ -406,6 +394,7 @@ export default function WhatsAppPage() {
           </div>
         </Card>
       </div>
+      </DesktopOnly>
     </AppLayout>
   );
 }

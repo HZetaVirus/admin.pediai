@@ -19,16 +19,29 @@ import {
   LogOut,
   ChevronRight,
   PlayCircle,
-  MessageCircle
+  MessageCircle,
+  Megaphone,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { authService } from "@/services/authService";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
   label: string;
   href: string;
   active?: boolean;
+  onClick?: () => void;
+}
+
+interface SidebarSectionItem {
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+  desktopOnly?: boolean;
   onClick?: () => void;
 }
 
@@ -75,15 +88,39 @@ const SidebarSection = ({ title, children }: { title: string, children: React.Re
 );
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const pathname = usePathname();
+
+  // Check Auth
+  useEffect(() => {
+    if (pathname !== '/login') {
+      const authenticated = authService.isAuthenticated();
+      if (!authenticated) {
+        router.push('/login');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [pathname, router]);
 
   // Close sidebar on navigation
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [pathname]);
 
-  const sections = [
+  const handleLogout = () => {
+    toast.promise(authService.signOut(), {
+      loading: 'Saindo...',
+      success: 'Até logo!',
+      error: 'Erro ao sair'
+    });
+  };
+
+  const sections: { title: string, items: SidebarSectionItem[] }[] = [
     {
       title: "PRINCIPAL",
       items: [
@@ -92,7 +129,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         { icon: <UtensilsCrossed size={20} />, label: "Cardápio", href: "/menu" },
         { icon: <Folder size={20} />, label: "Categorias", href: "/categories" },
         { icon: <ListPlus size={20} />, label: "Opcionais", href: "/options" },
-        { icon: <MessageCircle size={20} />, label: "WhatsApp", href: "/whatsapp" },
+        { icon: <MessageCircle size={20} />, label: "WhatsApp", href: "/whatsapp", desktopOnly: true },
+        { icon: <Megaphone size={20} />, label: "Campanhas", href: "/whatsapp/campaigns", desktopOnly: true },
         { icon: <Bike size={20} />, label: "Entregadores", href: "/delivery" },
       ]
     },
@@ -101,6 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       items: [
         { icon: <TrendingUp size={20} />, label: "Vendas", href: "/sales" },
         { icon: <Users size={20} />, label: "Clientes", href: "/customers" },
+        { icon: <TrendingUp size={20} />, label: "Análise de CMV", href: "/reports/cmv" },
       ]
     },
     {
@@ -108,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       items: [
         { icon: <SettingsIcon size={20} />, label: "Configurações", href: "/settings" },
         { icon: <PlayCircle size={20} />, label: "Tutoriais", href: "/tutorials" },
-        { icon: <LogOut size={20} />, label: "Sair", href: "/logout" },
+        { icon: <LogOut size={20} />, label: "Sair", href: "#", onClick: handleLogout },
       ]
     }
   ];
@@ -160,16 +199,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 px-4 py-2 overflow-y-auto hide-scrollbar space-y-1">
           {sections.map((section) => (
             <SidebarSection key={section.title} title={section.title}>
-              {section.items.map((item) => {
-                return (
-                  <SidebarItem 
-                    key={item.href}
-                    {...item}
-                    active={pathname === item.href}
-                    onClick={() => setIsSidebarOpen(false)}
-                  />
-                );
-              })}
+              {section.items.map((item: SidebarSectionItem) => (
+                <div key={item.label} className={cn(item.desktopOnly && "hidden lg:block")}>
+                  {item.onClick ? (
+                    <button
+                      onClick={item.onClick}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 group relative"
+                    >
+                      <div className="group-hover:scale-110 transition-transform duration-200">
+                        {item.icon}
+                      </div>
+                      <span className="text-[15px]">{item.label}</span>
+                    </button>
+                  ) : (
+                    <SidebarItem 
+                      icon={item.icon}
+                      label={item.label}
+                      href={item.href}
+                      active={pathname === item.href}
+                      onClick={() => setIsSidebarOpen(false)}
+                    />
+                  )}
+                </div>
+              ))}
             </SidebarSection>
           ))}
         </nav>
@@ -227,17 +279,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Page Content with Animation */}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          {isCheckingAuth && pathname !== '/login' ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </main>
       </div>
     </div>

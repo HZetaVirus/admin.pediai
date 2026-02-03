@@ -215,6 +215,72 @@ class WhatsAppService {
       return false;
     }
   }
+
+  async sendMediaMessage(remoteJid: string, media: string, caption: string, type: 'image' | 'video' | 'document' = 'image'): Promise<boolean> {
+    try {
+      const response = await fetch(`${BASE_URL}/message/sendMedia/${this.currentInstance}`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({
+          number: remoteJid,
+          media: media,
+          mediatype: type,
+          caption: caption,
+          delay: 1200,
+        }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error sending media message:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sends messages to multiple numbers with a delay between them.
+   * This is a client-side implementation of bulk sending.
+   */
+  async sendBulkMessages(
+    contacts: { phone: string; name?: string }[],
+    messageTemplate: string,
+    mediaUrl?: string,
+    onProgress?: (index: number, success: boolean) => void
+  ): Promise<{ sent: number; failed: number }> {
+    let sent = 0;
+    let failed = 0;
+
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const personalizedMessage = messageTemplate.replace(/\{\{name\}\}/g, contact.name || "cliente");
+      
+      const remoteJid = contact.phone.includes('@') ? contact.phone : `${contact.phone}@s.whatsapp.net`;
+      
+      let success = false;
+      if (mediaUrl) {
+        success = await this.sendMediaMessage(remoteJid, mediaUrl, personalizedMessage, 'image');
+      } else {
+        success = await this.sendMessage(remoteJid, personalizedMessage);
+      }
+      
+      if (success) {
+        sent++;
+      } else {
+        failed++;
+      }
+
+      if (onProgress) {
+        onProgress(i, success);
+      }
+
+      // Add a random delay between 2 and 5 seconds to look more human
+      if (i < contacts.length - 1) {
+        const delay = Math.floor(Math.random() * (5000 - 2000 + 1) + 2000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    return { sent, failed };
+  }
 }
 
 export const whatsappService = new WhatsAppService();

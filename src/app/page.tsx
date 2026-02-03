@@ -97,10 +97,7 @@ export default function Dashboard() {
                 <h4 className="text-lg font-bold text-slate-800">Mais Vendidos</h4>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-600"><span className="text-slate-400 mr-2">#1</span> Salada Africana</span>
-                  <span className="text-sm font-black text-slate-800">3x</span>
-                </div>
+                <p className="text-sm font-bold text-slate-400">Nenhum dado disponível</p>
               </div>
             </Card>
 
@@ -108,7 +105,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total de Clientes</p>
-                  <p className="text-3xl font-black text-slate-800 tracking-tight">1</p>
+                  <p className="text-3xl font-black text-slate-800 tracking-tight">0</p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm group-hover:scale-110 transition-transform">
                   <Users size={24} />

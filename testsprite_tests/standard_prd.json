@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "project": "PediAi Admin",
+    "date": "2026-02-03",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "PediAi Admin is a web-based administration panel for food-service businesses using the PediAi platform. It centralizes order management, menu/catalog controls, customer records, sales and CMV (cost of goods sold) reporting, and WhatsApp-based customer communications in a modern Next.js/TypeScript interface.",
+  "core_goals": [
+    "Provide operators a single, responsive admin console for managing orders, menu items, customers and sales reporting.",
+    "Enable real-time order tracking and status updates to reduce fulfillment latency and errors.",
+    "Deliver accurate financial and CMV reports to help operators optimize pricing and inventory.",
+    "Offer reliable WhatsApp integration for order notifications and customer messaging.",
+    "Ensure secure access control, auditability and scalable architecture using Supabase and modern frontend tooling."
+  ],
+  "key_features": [
+    "Authentication & Access Control: Supabase-based login, session persistence, protected routes and role-aware UI.",
+    "Dashboard: KPI tiles, recent activity feed and charts (sales, orders) giving a quick operational snapshot.",
+    "Order Management: Real-time order list with status workflow (Received → Preparing → Out for Delivery → Delivered), order details modal, and operator actions.",
+    "Menu & Category Management: Create/edit products, categories, variants/options, availability toggles and pricing.",
+    "Sales & Reports: Time-range sales charts, revenue breakdowns, exportable reports and CMV analysis.",
+    "WhatsApp Integration: Store connection flow, templated message configuration, send/queue notifications to customers.",
+    "Customer Directory: Customer profiles, order history and quick actions (re-order, message).",
+    "Layout & Navigation System: Shared AppLayout, responsive sidebar, top bar and route structure using Next.js App Router.",
+    "Settings & Store Profile: Store hours, delivery zones and fees, notification preferences.",
+    "Realtime & Backend Integration: Supabase realtime for orders and state sync; services layer for WhatsApp and report calculations."
+  ],
+  "user_flow_summary": [
+    "Authentication: Operator navigates to /login → completes Supabase login → redirected to Dashboard with protected routes enforced.",
+    "View Dashboard: On login, dashboard loads KPIs, recent orders and sales charts; operator drills into a chart or recent order for details.",
+    "Manage Orders: Operator opens /orders → sees real-time list (filtered by status) → selects an order → updates status → system sends configured WhatsApp notification.",
+    "Manage Menu: Operator opens /menu or /categories → creates/edits a category or product → saves changes → changes reflect in menu listing and availability takes effect.",
+    "Reports & CMV: Operator opens /reports → selects date range and report type (sales or CMV) → system calculates aggregates and displays charts; operator exports CSV if needed.",
+    "WhatsApp Connection: Operator opens /whatsapp/connection → links store account / credentials → configures message templates → tests sending a notification to verify integration.",
+    "Customer Management: Operator opens /customers → searches for a customer → views order history and can trigger re-order or message.",
+    "Settings Update: Operator opens settings → updates store profile, hours or delivery fees → saves and the system validates and persists changes."
+  ],
+  "validation_criteria": [
+    "Authentication: Only authenticated sessions can access protected routes; session expiration and refresh behaviors verified. Login failure shows clear error messages.",
+    "Realtime Order Updates: Order status changes propagate to other logged-in clients within 2–5 seconds via Supabase realtime channels; tests simulate concurrent updates.",
+    "Order Workflow: Status transitions follow allowed paths; invalid transitions are rejected and logged. Order detail contains required fields (items, totals, customer contact).",
+    "Menu Management: Creating/updating/deleting categories and products persists to Supabase and is reflected in UI within one page reload or realtime sync if implemented. Product options and availability toggles behave as expected.",
+    "Sales & CMV Accuracy: Reported revenue and CMV numbers match raw transaction and inventory entries within tolerance; CMV formulas documented and unit-tested.",
+    "WhatsApp Integration: Connection flow can be completed and saved; sending a test message returns success state and queued messages appear in sending queue. Message templates with variables render correctly.",
+    "Customer Directory: Customer records display accurate order history, and search/filter returns expected results. Re-order action creates a draft order with correct items.",
+    "UI/UX & Accessibility: Responsive layouts for desktop and tablet; components meet WCAG AA color/contrast and keyboard navigation where applicable.",
+    "Performance & Stability: Dashboard initial paint under 1.5s on throttled 4G; route transitions remain smooth and animations do not block interactions. Key endpoints have monitoring and error reporting.",
+    "Security & Compliance: Input validation and server-side authorization prevent privilege escalation, injection and excessive data exposure. Secrets (WhatsApp credentials, API keys) stored securely and not exposed to the client.",
+    "Test Coverage & CI: Unit/integration tests cover critical business logic (order workflow, CMV calc, auth guards). E2E tests validate main user flows. CI pipeline runs linting, tests and typechecks before merge."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "Next.js (App Router)",
+      "Tailwind CSS",
+      "Supabase",
+      "Framer Motion",
+      "Radix UI",
+      "Lucide React"
+    ],
+    "features": [
+      {
+        "name": "Dashboard",
+        "description": "Main overview screen showing sales stats, order charts, and recent activity.",
+        "files": [
+          "src/app/page.tsx"
+        ]
+      },
+      {
+        "name": "Authentication",
+        "description": "User login and access control functionality.",
+        "files": [
+          "src/app/login/page.tsx",
+          "src/app/login/layout.tsx"
+        ]
+      },
+      {
+        "name": "Order Management",
+        "description": "Real-time order tracking and management system.",
+        "files": [
+          "src/app/orders/page.tsx"
+        ]
+      },
+      {
+        "name": "Menu Management",
+        "description": "Product and category management for the store.",
+        "files": [
+          "src/app/menu/page.tsx",
+          "src/app/categories/page.tsx"
+        ]
+      },
+      {
+        "name": "Sales & Reports",
+        "description": "Financial tracking, sales history, and CMV analysis.",
+        "files": [
+          "src/app/sales/page.tsx",
+          "src/app/reports/page.tsx",
+          "src/app/reports/cmv/page.tsx"
+        ]
+      },
+      {
+        "name": "WhatsApp Integration",
+        "description": "Store connection and message automation for WhatsApp.",
+        "files": [
+          "src/app/whatsapp/page.tsx",
+          "src/app/whatsapp/connection/page.tsx"
+        ]
+      },
+      {
+        "name": "Customer Directory",
+        "description": "Management of customer profiles and order history.",
+        "files": [
+          "src/app/customers/page.tsx"
+        ]
+      },
+      {
+        "name": "Layout System",
+        "description": "Shared application structure and sidebars.",
+        "files": [
+          "src/components/layout/AppLayout.tsx",
+          "src/app/layout.tsx"
+        ]
+      }
+    ]
+  }
+}

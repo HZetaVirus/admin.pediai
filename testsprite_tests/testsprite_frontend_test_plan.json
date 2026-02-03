@@ -1,0 +1,792 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login with valid credentials",
+    "description": "Verify operator can authenticate with valid Supabase credentials, session persists, and user is redirected to Dashboard.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid email and password for an existing operator account and submit"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert response returns successful authentication and a valid session token"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert user is redirected to / (Dashboard) and Dashboard KPI tiles are visible"
+      },
+      {
+        "type": "action",
+        "description": "Reload the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert session persists and user remains authenticated after reload"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login failure with incorrect credentials",
+    "description": "Verify login fails with invalid credentials and user sees clear error message without session creation.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid email and incorrect password and submit"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert authentication request returns an error and no session token is issued"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI displays a clear, actionable error message (e.g., 'Invalid email or password')"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Protected routes blocked for unauthenticated users",
+    "description": "Verify unauthenticated access to protected routes (e.g., /orders, /menu, /reports) is blocked and user is redirected to /login.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a fresh browser session with no authentication and navigate to /orders"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert user is redirected to /login"
+      },
+      {
+        "type": "action",
+        "description": "Attempt direct API request to a protected endpoint (e.g., GET /api/orders) without an auth token"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert API returns 401 Unauthorized and does not leak protected data"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Session expiration and refresh behavior",
+    "description": "Verify session expires correctly; refresh works if refresh token available; if refresh fails, user is redirected to login.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate as an operator and note session expiry duration"
+      },
+      {
+        "type": "action",
+        "description": "Simulate session expiry on server or advance clock beyond expiry"
+      },
+      {
+        "type": "action",
+        "description": "Trigger a route transition or API call that requires authentication"
+      },
+      {
+        "type": "assertion",
+        "description": "If refresh token valid, assert a new session is acquired and action succeeds"
+      },
+      {
+        "type": "assertion",
+        "description": "If refresh token invalid/expired, assert user is redirected to /login and old session is cleared"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Role-aware UI rendering and authorization",
+    "description": "Verify UI elements and API operations are constrained by user roles (e.g., operator vs admin).",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as a user with 'operator' role"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI does not show admin-only controls (e.g., store profile edit if restricted)"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to call an admin-only API endpoint (e.g., PATCH /api/store/profile) with operator credentials"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert API returns 403 Forbidden"
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin role"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert admin-only UI controls are visible and admin API calls succeed"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Dashboard loads KPIs and recent activity",
+    "description": "Verify Dashboard loads KPI tiles, recent activity feed and sales chart with correct data for the logged-in store.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Authenticate and navigate to Dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert KPI tiles (total sales, orders, average ticket) are present and display numeric values"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert recent activity feed lists recent orders with timestamps and statuses"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert sales chart renders and x/y axes match selected date range"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Real-time order creation propagates to open clients",
+    "description": "Verify a new order created (via API or simulated device) appears in other logged-in clients within 2–5 seconds.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open two independent authenticated sessions (Client A and Client B) on /orders"
+      },
+      {
+        "type": "action",
+        "description": "Create a new order using a backend API or simulated POS (not through UI) for the store"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert Client A receives and displays the new order within 2–5 seconds"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert Client B receives and displays the new order within 2–5 seconds"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Order status workflow valid transitions",
+    "description": "Verify allowed status transitions (Received → Preparing → Out for Delivery → Delivered) succeed and are persisted.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open an existing order in the UI"
+      },
+      {
+        "type": "action",
+        "description": "Change status from Received to Preparing"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert status updates in UI and persists in backend"
+      },
+      {
+        "type": "action",
+        "description": "Change status from Preparing to Out for Delivery, then to Delivered"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert each transition is allowed, reflected in UI, and results in audit log entries with timestamp and user"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Order status invalid transition rejected",
+    "description": "Verify invalid transitions (e.g., Delivered → Preparing) are rejected and show meaningful error, and state remains unchanged.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a Delivered order in the UI"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to set status to Preparing"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI/API rejects transition with HTTP 400 or 422 and a clear error message"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert order status remains Delivered in backend"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Concurrent status updates and conflict resolution",
+    "description": "Simulate two operators updating the same order concurrently and verify system handles conflicts predictably (e.g., last-write or reject based on business rules) and logs conflicts.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the same order in two browser sessions (Operator A and Operator B)"
+      },
+      {
+        "type": "action",
+        "description": "Operator A sets status to Preparing and submits"
+      },
+      {
+        "type": "action",
+        "description": "Before propagation, Operator B attempts to set status to Out for Delivery and submits"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert backend resolves according to defined rule: either Operator B's change is rejected with clear error or last write wins and order ends in the final state"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert both clients receive final state and an audit log records both attempts and the resolution"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Order details contain required fields",
+    "description": "Verify order detail modal displays items, variants, quantities, totals, taxes, discounts, delivery fees and customer contact info.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open an order with a variety of items including variants, discounts and fees"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert each line item shows product name, selected options/variants, unit price, quantity and line total"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert order totals section shows subtotal, tax, discounts, delivery fee, and grand total"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert customer contact (name, phone) is visible and actionable (message/re-order options present)"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "WhatsApp connection flow and saving credentials",
+    "description": "Verify operator can link a WhatsApp store connection, save credentials securely, and UI reflects connection status.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /whatsapp/connection as an admin"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid connection credentials/config and submit to connect"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert API returns success and UI shows connected status"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert credentials are not exposed in client responses (e.g., masked fields or absence of raw tokens in JSON payloads)"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "WhatsApp template variable rendering and test send queued",
+    "description": "Verify templated messages with variables render correctly and sending a test message places the send in the queued state.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or edit a WhatsApp message template containing variables (e.g., {{order_id}}, {{customer_name}})"
+      },
+      {
+        "type": "action",
+        "description": "Trigger 'Send test message' for a sample customer/order"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert template variables are replaced with the appropriate values in the message preview"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert API responds with queued status and an entry appears in the message queue with status 'queued' or 'scheduled'"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "WhatsApp send failure handling and retry queue",
+    "description": "Verify when WhatsApp credentials are invalid or remote API returns failure, messages move to failed state and retry logic or operator notification works.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Configure invalid WhatsApp credentials for the store"
+      },
+      {
+        "type": "action",
+        "description": "Trigger a notification send (e.g., change order status that normally sends a message)"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert message enters 'failed' state in the queue with an error code/message"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert operator is notified in UI (toast or queue view) with instructions to reconfigure or retry"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Menu: Create category and product with variants",
+    "description": "Verify creating a category and a product with variants/options persists to backend and appears in the menu listing and product editor.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /categories and create a new category with a unique name"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert category appears in category list and is saved in backend"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /menu and create a new product assigned to the created category; add two variants/options with different prices"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert product appears in menu list with correct category and displays availability and base price"
+      },
+      {
+        "type": "action",
+        "description": "Open product editor and assert variants/options and their prices are present"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Menu: Toggle product availability and effect on ordering",
+    "description": "Verify toggling availability hides product from ordering flows and updates listing; toggling back restores it.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a product in editor and toggle its availability off and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert product shows availability=false in listing and cannot be added to new draft orders in the UI"
+      },
+      {
+        "type": "action",
+        "description": "Toggle availability back on and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert product is available again in menu and can be added to draft orders"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Menu: Validation for price and required fields",
+    "description": "Verify creating/editing products validates required fields (name, price) and rejects invalid prices (negative, non-numeric).",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create a product without a name and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI shows validation error and backend rejects creation"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to set product price to negative number or non-numeric value and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI shows validation error and backend returns 400 with descriptive message"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Sales & Reports: Date range selection and aggregates",
+    "description": "Verify reports page calculates and displays sales aggregates for user-selected date ranges and handles empty ranges gracefully.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /reports and select a date range with known transactions"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert sales total, number of orders, average ticket and breakdowns display and match backend aggregates"
+      },
+      {
+        "type": "action",
+        "description": "Select a date range with no transactions"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert charts and aggregates show zero or 'no data' state and UI handles it without errors"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "CMV calculation accuracy for sample dataset",
+    "description": "Verify CMV (cost of goods sold) calculations match expected results for a controlled dataset using documented formulas.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Seed test data: create inventory items with unit costs and create transactions/orders that consume those items"
+      },
+      {
+        "type": "action",
+        "description": "Open /reports/cmv, select date range covering the seeded transactions"
+      },
+      {
+        "type": "assertion",
+        "description": "Compute expected CMV manually and assert the CMV values displayed by the system equal expected values within accepted tolerance"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert breakdowns per product/category match expected contributions to CMV"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Customer directory search and order history",
+    "description": "Verify searching customers by name, phone, or email returns expected results and customer profile shows full order history.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /customers and perform search by full name"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert matching customer records appear in results"
+      },
+      {
+        "type": "action",
+        "description": "Search by partial phone number and by email"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert searches return expected matches and are case-insensitive"
+      },
+      {
+        "type": "action",
+        "description": "Open a customer's profile and view order history"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert order history lists orders with statuses, totals and timestamps"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Customer re-order creates draft order with correct items",
+    "description": "Verify 're-order' action on a past order creates a draft order pre-populated with items, quantities and prices corresponding to the original order (with current price adjustments flagged).",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a customer's past order and click 'Re-order'"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert a new draft order is created in the system and editor opens"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert draft order line items match the original order items and quantities"
+      },
+      {
+        "type": "assertion",
+        "description": "If product prices changed since original order, assert UI flags the updated price and shows original vs current price"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Settings: Update store hours and validation",
+    "description": "Verify updating store hours persists, validates sensible ranges (open before close), and invalid inputs are rejected.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Settings -> Store Profile and change store hours to a valid range (e.g., 09:00 - 21:00) and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert changes persist in backend and are reflected in UI"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to set invalid hours (e.g., open time after close time, or malformed time string) and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert UI shows validation error and backend rejects update"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Delivery zones and fees validation and effect on order totals",
+    "description": "Verify adding delivery zones with fees persists and affects order totals when a delivery address falls inside a zone.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Add a delivery zone with defined polygon/area and set a fee"
+      },
+      {
+        "type": "action",
+        "description": "Create a draft order with a customer/address inside that zone and compute total"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert delivery fee is applied to order totals and displayed in order summary"
+      },
+      {
+        "type": "action",
+        "description": "Change zone fee and update order calculation"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert updated fee is applied to newly created draft orders; existing completed orders remain unchanged"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Layout & navigation responsive behavior",
+    "description": "Verify AppLayout (sidebar, topbar, route structure) is responsive for desktop and tablet widths and keyboard navigation works for primary controls.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the app on a desktop-sized viewport and verify sidebar and topbar render as expected"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert navigation links are clickable and route transitions load corresponding pages"
+      },
+      {
+        "type": "action",
+        "description": "Resize to tablet-width viewport and verify sidebar collapses to responsive variant or hamburger menu"
+      },
+      {
+        "type": "action",
+        "description": "Use keyboard (Tab/Enter) to navigate to major controls (orders, menu, reports) and activate them"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert keyboard navigation focuses elements in logical order and activates routes"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Prevent exposure of secrets in API responses",
+    "description": "Verify WhatsApp credentials and other secrets are never returned in plaintext in client-side API responses or UI payloads.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Call the WhatsApp connection details API endpoint with authenticated admin credentials"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert response does not include raw credentials/apikeys/tokens; sensitive fields are masked or omitted"
+      },
+      {
+        "type": "action",
+        "description": "Perform web console inspection of API responses from connection endpoints"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert no secrets appear in client JS bundles or accessible runtime state"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Input sanitization prevents XSS in product descriptions",
+    "description": "Verify product descriptions containing potential XSS payloads are sanitized and do not execute in the client.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or edit a product and set description to a script-like payload (e.g., '<script>alert(1)</script>')"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert backend accepts but stores an escaped/sanitized version or rejects unsafe input according to policy"
+      },
+      {
+        "type": "action",
+        "description": "Open product in product listing or detail page"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert no script executes in the browser and description displays safely (escaped HTML or sanitized markup)"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "SQL injection attempts are rejected",
+    "description": "Verify attempts to inject SQL through form inputs do not result in unauthorized data access or server errors.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create a category with name containing SQL injection payload (e.g., \"Test'; DROP TABLE users; --\")"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert backend treats input as data, does not execute destructive SQL, and returns either sanitized string or validation error"
+      },
+      {
+        "type": "action",
+        "description": "Scan logs and datastore for unexpected deletions or errors"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert no schema or data loss occurred and API returned safe response"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Performance: Dashboard initial paint under throttled network",
+    "description": "Measure Dashboard initial paint on throttled 4G; assert initial meaningful paint completes under 1.5s for target environment (or report if not achievable).",
+    "category": "performance",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Using a testing harness (e.g., Lighthouse or synthetic runner), set network to throttled 4G and CPU throttling appropriate"
+      },
+      {
+        "type": "action",
+        "description": "Load authenticated Dashboard route and capture first meaningful paint / time-to-interactive metrics"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert first meaningful paint is <= 1500ms; if not, record measured value and identify largest contributors"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Audit logs record critical actions",
+    "description": "Verify audit entries are created for critical operations such as order status changes, product create/edit/delete and store profile updates with user id and timestamp.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform actions: change an order status, create a product, edit store profile"
+      },
+      {
+        "type": "action",
+        "description": "Query audit log API or DB for entries related to those actions"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert each action produced an audit log record containing actor id, action type, target resource id, and timestamp"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "CI pipeline enforces linting, typechecking and tests",
+    "description": "Verify CI pipeline run includes lint, typecheck and unit/integration test steps and fails on regressions.",
+    "category": "process",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger CI pipeline for a branch that contains an intentional lint/type/test failure"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert CI fails at the appropriate stage (lint or typecheck or tests) and provides actionable logs"
+      },
+      {
+        "type": "action",
+        "description": "Trigger CI with all checks passing"
+      },
+      {
+        "type": "assertion",
+        "description": "Assert CI completes successfully and artifacts (test coverage reports) are generated"
+      }
+    ]
+  }
+]
