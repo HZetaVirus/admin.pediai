@@ -3,8 +3,8 @@
 import React from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
-import { 
-  Search, 
+import {
+  Search,
   Users,
   Download,
   MoreVertical,
@@ -26,7 +26,7 @@ export default function CustomersPage() {
   const [store, setStore] = React.useState<Database["public"]["Tables"]["stores"]["Row"] | null>(null);
   const [syncing, setSyncing] = React.useState(false);
 
-  const fetchCustomers = React.useCallback(async (storeId: number) => {
+  const fetchCustomers = React.useCallback(async (storeId: string) => {
     setLoading(true);
     try {
       let query = supabase
@@ -55,7 +55,7 @@ export default function CustomersPage() {
         .from('stores')
         .select('*')
         .single();
-      
+
       if (storeData) {
         setStore(storeData);
         fetchCustomers(storeData.id);
@@ -70,21 +70,16 @@ export default function CustomersPage() {
     if (!store) return;
     setSyncing(true);
     try {
-      // 1. Fetch all orders for this store with profiles
+      // 1. Fetch all orders for this store
       const { data: orders, error } = await supabase
         .from('orders')
         .select(`
-          user_id,
-          total,
-          created_at,
-          profiles:user_id (
-            full_name,
-            phone,
-            email
-          )
+          customer_id,
+          total_amount,
+          created_at
         `)
         .eq('store_id', store.id)
-        .order('created_at', { ascending: false });
+        .not('customer_id', 'is', null);
 
       if (error) throw error;
       if (!orders || orders.length === 0) {
@@ -94,85 +89,50 @@ export default function CustomersPage() {
       }
 
       console.log(`Analyzing ${orders.length} orders...`);
-      let newCount = 0;
       let updateCount = 0;
 
-      // Group orders by user_id to aggregate stats
-      const userStats = new Map<string, { 
-        totalOrders: number, 
-        totalSpent: number, 
-        lastInteraction: string,
-        profile: { full_name: string | null; phone: string | null; email: string | null }
+      // Group orders by customer_id to aggregate stats
+      const customerStats = new Map<string, {
+        totalOrders: number,
+        totalSpent: number,
+        lastInteraction: string
       }>();
 
       for (const order of orders) {
-        if (!order.user_id || !order.profiles) continue;
-        
-        // Cast profiles to expected type since Supabase join returns it as single object or array depending on relation, here it's single
-        const profileData = order.profiles as unknown as { full_name: string | null; phone: string | null; email: string | null };
+        if (!order.customer_id) continue;
 
-        const existing = userStats.get(order.user_id) || { 
-          totalOrders: 0, 
-          totalSpent: 0, 
-          lastInteraction: order.created_at,
-          profile: profileData
+        const existing = customerStats.get(order.customer_id) || {
+          totalOrders: 0,
+          totalSpent: 0,
+          lastInteraction: order.created_at || new Date().toISOString()
         };
 
         existing.totalOrders += 1;
-        existing.totalSpent += order.total;
+        existing.totalSpent += order.total_amount || 0;
+
         // Keep the latest date
-        if (new Date(order.created_at) > new Date(existing.lastInteraction)) {
+        if (order.created_at && new Date(order.created_at) > new Date(existing.lastInteraction)) {
           existing.lastInteraction = order.created_at;
         }
 
-        userStats.set(order.user_id, existing);
+        customerStats.set(order.customer_id, existing);
       }
 
-      // Process each unique user
-      for (const [userId, stats] of userStats.entries()) {
-        const { full_name, phone, email } = stats.profile;
-        if (!phone) continue; // Phone is required for unique constraint usually, or helps dedupe
-
-        // Check if customer exists by phone (primary key for our unification) or profile_id
-        const { data: existingCustomer } = await supabase
+      // Process each unique customer
+      for (const [customerId, stats] of customerStats.entries()) {
+        // Update stats
+        await supabase
           .from('customers')
-          .select('id')
-          .eq('store_id', store.id)
-          .or(`phone.eq.${phone},profile_id.eq.${userId}`)
-          .maybeSingle();
-
-        if (existingCustomer) {
-           // Update stats
-           await supabase
-             .from('customers')
-             .update({
-               total_orders: stats.totalOrders,
-               total_spent: stats.totalSpent,
-               last_interaction: stats.lastInteraction,
-               profile_id: userId // Ensure link
-             })
-             .eq('id', existingCustomer.id);
-           updateCount++;
-        } else {
-          // Insert new
-          await supabase
-            .from('customers')
-            .insert({
-              store_id: store.id,
-              profile_id: userId,
-              full_name: full_name || "Cliente App",
-              phone: phone,
-              email: email,
-              source: 'app_menu',
-              total_orders: stats.totalOrders,
-              total_spent: stats.totalSpent,
-              last_interaction: stats.lastInteraction
-            });
-          newCount++;
-        }
+          .update({
+            total_orders: stats.totalOrders,
+            total_spent: stats.totalSpent,
+            last_interaction: stats.lastInteraction
+          })
+          .eq('id', customerId);
+        updateCount++;
       }
 
-      alert(`Sincronização App concluída!\nNovos: ${newCount}\nAtualizados: ${updateCount}`);
+      alert(`Sincronização App concluída!\nClientes atualizados: ${updateCount}`);
       fetchCustomers(store.id);
 
     } catch (err) {
@@ -206,7 +166,7 @@ export default function CustomersPage() {
       for (const chat of chats) {
         const remoteJid = chat.remoteJid || chat.id;
         if (!remoteJid || remoteJid.includes('@g.us')) continue; // Skip groups
-        
+
         const phone = remoteJid.split('@')[0];
         const name = chat.pushName || chat.name || phone;
 
@@ -219,23 +179,23 @@ export default function CustomersPage() {
           .single();
 
         if (existing) {
-            // Optional: Update last interaction or name if cleaner
-            // For now, we assume user might have edited the name, so we don't overwrite unless empty
-            updateCount++;
+          // Optional: Update last interaction or name if cleaner
+          // For now, we assume user might have edited the name, so we don't overwrite unless empty
+          updateCount++;
         } else {
           // Insert new customer
           const { error: insertError } = await supabase
             .from('customers')
             .insert({
-               store_id: store.id,
-               full_name: name,
-               phone: phone,
-               source: 'whatsapp',
-               last_interaction: new Date().toISOString(), // Use current time as proxy for last known interaction if chat has no timestamp
-               total_orders: 0,
-               total_spent: 0
+              store_id: store.id,
+              full_name: name,
+              phone: phone,
+              source: 'whatsapp',
+              last_interaction: new Date().toISOString(), // Use current time as proxy for last known interaction if chat has no timestamp
+              total_orders: 0,
+              total_spent: 0
             });
-          
+
           if (!insertError) newCount++;
         }
       }
@@ -251,9 +211,9 @@ export default function CustomersPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(c => 
-    (c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-     c.phone?.includes(searchQuery))
+  const filteredCustomers = customers.filter(c =>
+  (c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.phone?.includes(searchQuery))
   );
 
   const getSourceIcon = (source: string | null) => {
@@ -266,14 +226,14 @@ export default function CustomersPage() {
 
   return (
     <AppLayout>
-       <div className="max-w-6xl mx-auto space-y-8 pb-12">
+      <div className="max-w-6xl mx-auto space-y-8 pb-12">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Base de Clientes</h1>
             <p className="text-slate-500 mt-2 font-medium">Gerencie seus contatos do WhatsApp e App em um só lugar.</p>
           </div>
           <div className="flex gap-3">
-             <button 
+            <button
               onClick={handleSyncWhatsApp}
               disabled={syncing || !store}
               className="flex items-center gap-2 px-4 py-3 bg-green-50 text-green-700 font-bold rounded-2xl border border-green-100 hover:bg-green-100 transition-all active:scale-95 disabled:opacity-50 text-xs md:text-sm"
@@ -281,7 +241,7 @@ export default function CustomersPage() {
               <Download size={18} className={syncing ? "animate-bounce" : ""} />
               {syncing ? "WhatsApp..." : "WhatsApp"}
             </button>
-            <button 
+            <button
               onClick={handleSyncApp}
               disabled={syncing || !store}
               className="flex items-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-2xl border border-blue-100 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50 text-xs md:text-sm"
@@ -299,37 +259,37 @@ export default function CustomersPage() {
         <Card className="border-none shadow-xl bg-white rounded-[32px] overflow-hidden">
           {/* Filters & Search */}
           <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row gap-4 items-center justify-between">
-             <div className="relative w-full md:max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                <input 
-                  type="text" 
-                  placeholder="Buscar por nome ou telefone..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-slate-600 placeholder:text-slate-300"
-                />
-             </div>
-             
-             <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                <button 
-                  onClick={() => setSourceFilter(null)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${!sourceFilter ? "bg-slate-800 text-white shadow-lg shadow-slate-200" : "bg-white text-slate-400 border border-slate-100 hover:bg-slate-50"}`}
-                >
-                  Todos
-                </button>
-                <button 
-                  onClick={() => setSourceFilter('whatsapp')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 ${sourceFilter === 'whatsapp' ? "bg-green-500 text-white shadow-lg shadow-green-200" : "bg-white text-slate-400 border border-slate-100 hover:bg-green-50 hover:text-green-600"}`}
-                >
-                  <MessageCircle size={14} /> WhatsApp
-                </button>
-                <button 
-                   onClick={() => setSourceFilter('app_menu')}
-                   className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 ${sourceFilter === 'app_menu' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-primary"}`}
-                >
-                  <Smartphone size={14} /> App / Menu
-                </button>
-             </div>
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou telefone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-slate-600 placeholder:text-slate-300"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+              <button
+                onClick={() => setSourceFilter(null)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${!sourceFilter ? "bg-slate-800 text-white shadow-lg shadow-slate-200" : "bg-white text-slate-400 border border-slate-100 hover:bg-slate-50"}`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setSourceFilter('whatsapp')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 ${sourceFilter === 'whatsapp' ? "bg-green-500 text-white shadow-lg shadow-green-200" : "bg-white text-slate-400 border border-slate-100 hover:bg-green-50 hover:text-green-600"}`}
+              >
+                <MessageCircle size={14} /> WhatsApp
+              </button>
+              <button
+                onClick={() => setSourceFilter('app_menu')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2 ${sourceFilter === 'app_menu' ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white text-slate-400 border border-slate-100 hover:bg-red-50 hover:text-primary"}`}
+              >
+                <Smartphone size={14} /> App / Menu
+              </button>
+            </div>
           </div>
 
           {/* Table Header */}
@@ -344,15 +304,15 @@ export default function CustomersPage() {
           {/* List */}
           <div className="divide-y divide-slate-50">
             {loading ? (
-               <div className="p-12 text-center text-slate-400 text-sm font-medium">Carregando clientes...</div>
+              <div className="p-12 text-center text-slate-400 text-sm font-medium">Carregando clientes...</div>
             ) : filteredCustomers.length === 0 ? (
-               <div className="p-12 text-center space-y-3">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 mb-4">
-                    <Users size={32} />
-                  </div>
-                  <p className="text-slate-800 font-bold">Nenhum cliente encontrado</p>
-                  <p className="text-slate-400 text-sm">Tente sincronizar com o WhatsApp ou ajustar os filtros.</p>
-               </div>
+              <div className="p-12 text-center space-y-3">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 mb-4">
+                  <Users size={32} />
+                </div>
+                <p className="text-slate-800 font-bold">Nenhum cliente encontrado</p>
+                <p className="text-slate-400 text-sm">Tente sincronizar com o WhatsApp ou ajustar os filtros.</p>
+              </div>
             ) : (
               filteredCustomers.map((customer) => (
                 <div key={customer.id} className="grid grid-cols-12 gap-4 p-5 items-center hover:bg-slate-50/50 transition-colors group">
@@ -366,11 +326,10 @@ export default function CustomersPage() {
                     </div>
                   </div>
                   <div className="col-span-3 flex justify-center">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      customer.source === 'whatsapp' ? 'bg-green-50 text-green-600 border border-green-100' : 
-                      customer.source === 'app_menu' ? 'bg-red-50 text-red-600 border border-red-100' : 
-                      'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${customer.source === 'whatsapp' ? 'bg-green-50 text-green-600 border border-green-100' :
+                        customer.source === 'app_menu' ? 'bg-red-50 text-red-600 border border-red-100' :
+                          'bg-slate-100 text-slate-500'
+                      }`}>
                       {getSourceIcon(customer.source)}
                       {customer.source === 'whatsapp' ? 'WhatsApp' : customer.source === 'app_menu' ? 'App' : 'Manual'}
                     </span>
@@ -390,17 +349,17 @@ export default function CustomersPage() {
               ))
             )}
           </div>
-          
+
           {/* Footer Pagination (Visual only for now) */}
           <div className="p-6 border-t border-slate-50 flex items-center justify-between text-xs font-medium text-slate-400">
             <p>Mostrando {filteredCustomers.length} clientes</p>
             <div className="flex gap-2">
-               <button disabled className="px-4 py-2 bg-slate-50 rounded-xl opacity-50 cursor-not-allowed">Anterior</button>
-               <button disabled className="px-4 py-2 bg-slate-50 rounded-xl opacity-50 cursor-not-allowed">Próxima</button>
+              <button disabled className="px-4 py-2 bg-slate-50 rounded-xl opacity-50 cursor-not-allowed">Anterior</button>
+              <button disabled className="px-4 py-2 bg-slate-50 rounded-xl opacity-50 cursor-not-allowed">Próxima</button>
             </div>
           </div>
         </Card>
-       </div>
+      </div>
     </AppLayout>
   );
 }

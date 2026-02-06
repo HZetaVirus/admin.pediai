@@ -3,10 +3,10 @@
 import React from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
-import { 
-  Plus, 
-  Pencil, 
-  Trash2, 
+import {
+  Plus,
+  Pencil,
+  Trash2,
   GripVertical,
   Search,
   Folder,
@@ -38,7 +38,7 @@ export default function CategoriesPage() {
         .from('stores')
         .select('*')
         .single();
-      
+
       if (storeData) {
         setStore(storeData);
         fetchCategories(storeData.id);
@@ -49,20 +49,20 @@ export default function CategoriesPage() {
     fetchInitialData();
   }, []);
 
-  const fetchCategories = async (storeId?: number) => {
+  const fetchCategories = async (storeId?: string) => {
     setLoading(true);
     try {
       let query = supabase
         .from('categories')
         .select('*')
         .order('name');
-      
+
       if (storeId) {
         query = query.eq('store_id', storeId);
       }
-      
+
       const { data } = await query;
-      
+
       if (data) setCategories(data);
     } catch (err) {
       console.error("Error fetching categories:", err);
@@ -94,8 +94,8 @@ export default function CategoriesPage() {
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([{ 
-          name, 
+        .insert([{
+          name,
           slug,
           icon: selectedEmoji,
           description: "",
@@ -142,7 +142,7 @@ export default function CategoriesPage() {
           <Card className="border-none shadow-2xl bg-white rounded-[32px] overflow-hidden">
             <header className="p-8 pb-4 flex items-center justify-between">
               <h1 className="text-xl font-black text-slate-800 tracking-tight">Nova Categoria</h1>
-              <button 
+              <button
                 onClick={() => setShowForm(false)}
                 className="p-2 text-slate-400 hover:text-primary transition-colors"
               >
@@ -154,11 +154,11 @@ export default function CategoriesPage() {
               <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Nome *</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={name}
                     onChange={handleNameChange}
-                    placeholder="Ex: Hambúrgueres" 
+                    placeholder="Ex: Hambúrgueres"
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-slate-700 placeholder:text-slate-300"
                     required
                   />
@@ -166,11 +166,11 @@ export default function CategoriesPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Slug</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
-                    placeholder="hamburgueres" 
+                    placeholder="hamburgueres"
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-slate-700 placeholder:text-slate-300"
                   />
                   <p className="text-[10px] text-slate-400 font-medium">Identificador único para URLs (gerado automaticamente)</p>
@@ -187,38 +187,37 @@ export default function CategoriesPage() {
                           setSelectedEmoji(emoji);
                           setCustomEmoji(emoji);
                         }}
-                        className={`w-12 h-12 flex items-center justify-center text-xl rounded-2xl border transition-all ${
-                          selectedEmoji === emoji
+                        className={`w-12 h-12 flex items-center justify-center text-xl rounded-2xl border transition-all ${selectedEmoji === emoji
                             ? "bg-primary/5 border-primary shadow-sm scale-110"
                             : "bg-slate-50 border-slate-100 hover:border-slate-200"
-                        }`}
+                          }`}
                       >
                         {emoji}
                       </button>
                     ))}
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={customEmoji}
                     onChange={(e) => {
                       setCustomEmoji(e.target.value);
                       if (e.target.value) setSelectedEmoji(e.target.value);
                     }}
-                    placeholder="Ou digite um emoji..." 
+                    placeholder="Ou digite um emoji..."
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-slate-700 placeholder:text-slate-300"
                   />
                 </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowForm(false)}
                   className="px-8 py-3.5 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 transition-all text-sm"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={submitting}
                   className="px-10 py-3.5 bg-primary text-white font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95 text-sm disabled:opacity-50"
@@ -241,7 +240,7 @@ export default function CategoriesPage() {
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Categorias</h1>
             <p className="text-slate-500 mt-1">Organize seu cardápio em seções</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95 text-sm uppercase tracking-wider"
           >
@@ -257,9 +256,9 @@ export default function CategoriesPage() {
             </h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-              <input 
-                type="text" 
-                placeholder="Buscar..." 
+              <input
+                type="text"
+                placeholder="Buscar..."
                 className="pl-10 pr-4 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all w-48"
               />
             </div>
@@ -292,7 +291,7 @@ export default function CategoriesPage() {
                     <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-primary hover:border-primary/20 rounded-xl shadow-sm transition-all">
                       <Pencil size={18} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(cat.id)}
                       className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-500/20 rounded-xl shadow-sm transition-all"
                     >
@@ -312,7 +311,7 @@ export default function CategoriesPage() {
                   <p className="font-black text-slate-800">Nenhuma categoria encontrada</p>
                   <p className="text-sm text-slate-400">Comece organizando seu cardápio hoje.</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowForm(true)}
                   className="px-6 py-2.5 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors text-sm"
                 >

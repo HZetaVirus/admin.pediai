@@ -46,6 +46,7 @@ export default function SettingsPage() {
 
         setSettings(mergedSettings as unknown as StoreSettings);
 
+        // Operating hours is always inside the settings JSON field
         if (settingsFromDb.operating_hours) {
           setOperatingHours(settingsFromDb.operating_hours as unknown as OperatingHours);
         }

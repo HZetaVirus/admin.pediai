@@ -9,27 +9,37 @@ import { ptBR } from "date-fns/locale/pt-BR";
 interface OrderDetailModalProps {
   order: Order | null;
   onClose: () => void;
-  onStatusChange: (newStatusId: number) => void;
+  onStatusChange: (newStatus: string) => void;
 }
 
 export function OrderDetailModal({ order, onClose, onStatusChange }: OrderDetailModalProps) {
   if (!order) return null;
 
-  const timeElapsed = formatDistanceToNow(new Date(order.created_at), {
+  const timeElapsed = formatDistanceToNow(new Date(order.created_at || new Date()), {
     locale: ptBR,
     addSuffix: true,
   });
 
-  const trackingData = order.tracking_data as { address?: string; complement?: string; district?: string; city?: string } | null;
-  const fullAddress = trackingData?.address 
-    ? `${trackingData.address}${trackingData.complement ? ', ' + trackingData.complement : ''}, ${trackingData.district || ''} - ${trackingData.city || ''}`
+  const deliveryAddress = order.delivery_address as { address?: string; complement?: string; district?: string; city?: string } | null;
+  const fullAddress = deliveryAddress?.address
+    ? `${deliveryAddress.address}${deliveryAddress.complement ? ', ' + deliveryAddress.complement : ''}, ${deliveryAddress.district || ''} - ${deliveryAddress.city || ''}`
     : "Retirada no local";
 
-  const statusActions = {
-    1: { label: "Aceitar Pedido", nextStatus: 2, color: "bg-blue-500 hover:bg-blue-600" },
-    2: { label: "Despachar", nextStatus: 3, color: "bg-purple-500 hover:bg-purple-600" },
-    3: { label: "Finalizar", nextStatus: 4, color: "bg-green-500 hover:bg-green-600" },
-  }[order.status_id || 1];
+  const getStatusActions = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return { label: "Aceitar Pedido", nextStatus: 'preparing', color: "bg-blue-500 hover:bg-blue-600" };
+      case 'preparing':
+        return { label: "Despachar", nextStatus: 'out_for_delivery', color: "bg-purple-500 hover:bg-purple-600" };
+      case 'out_for_delivery':
+      case 'shipped':
+        return { label: "Finalizar", nextStatus: 'delivered', color: "bg-green-500 hover:bg-green-600" };
+      default:
+        return null;
+    }
+  };
+
+  const statusAction = getStatusActions(order.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -63,7 +73,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange }: OrderDetail
               <div className="flex-1">
                 <h4 className="font-bold text-slate-800">{order.profiles?.full_name || "Cliente"}</h4>
                 {order.profiles?.phone && (
-                  <a 
+                  <a
                     href={`https://wa.me/55${order.profiles.phone.replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -79,7 +89,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange }: OrderDetail
           </div>
 
           {/* Delivery Address */}
-          {trackingData?.address && (
+          {deliveryAddress?.address && (
             <div className="space-y-3">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Endereço de Entrega</h3>
               <div className="p-4 bg-slate-50 rounded-2xl">
@@ -133,26 +143,26 @@ export function OrderDetailModal({ order, onClose, onStatusChange }: OrderDetail
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-200">
                   <CreditCard size={18} />
                 </div>
-                <span className="font-medium text-slate-700">{order.payment_types?.name || "Não informado"}</span>
+                <span className="font-medium text-slate-700 capitalize">{order.payment_method || "Não informado"}</span>
               </div>
               <span className="text-2xl font-black text-slate-800">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}
               </span>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        {statusActions && (
+        {statusAction && (
           <div className="sticky bottom-0 p-6 border-t border-slate-100 bg-white rounded-b-3xl">
             <button
               onClick={() => {
-                onStatusChange(statusActions.nextStatus);
+                onStatusChange(statusAction.nextStatus);
                 onClose();
               }}
-              className={`w-full py-4 ${statusActions.color} text-white font-bold rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-wider`}
+              className={`w-full py-4 ${statusAction.color} text-white font-bold rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-wider`}
             >
-              {statusActions.label}
+              {statusAction.label}
             </button>
           </div>
         )}

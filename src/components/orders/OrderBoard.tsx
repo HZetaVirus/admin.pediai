@@ -13,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export function OrderBoard() {
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [storeId, setStoreId] = React.useState<number | null>(null);
+  const [storeId, setStoreId] = React.useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
-  
+
   // Audio ref for notifications
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
@@ -35,7 +35,7 @@ export function OrderBoard() {
       // Get current user's store
       const session = authService.getSession();
       const user = session?.user;
-      
+
       if (!user) return;
 
       // --- AGGRESSIVE STORE DISCOVERY ---
@@ -45,36 +45,36 @@ export function OrderBoard() {
         .eq('owner_id', user.id)
         .single();
 
-      let finalStore: { id: number; owner_id?: string } | null = storeResult;
+      let finalStore: { id: string; owner_id?: string | null } | null = storeResult;
 
       if (!finalStore) {
         console.warn("[AUTH] Store not found by owner_id in OrderBoard, trying fallback...");
         const { data: anyStore } = await supabase.from('stores').select('id').limit(1).single();
         finalStore = anyStore;
       }
-      
+
       if (!finalStore) {
         console.warn("[AUTH] Still no store, checking orders...");
         const { data: orderWithStore } = await supabase.from('orders').select('store_id').limit(1).single();
-        if (orderWithStore) finalStore = { id: orderWithStore.store_id } as any;
+        if (orderWithStore?.store_id) finalStore = { id: orderWithStore.store_id };
       }
-      
+
       if (finalStore) {
-        const store = finalStore; // Immutable for closures
-        setStoreId(store.id);
-        const initialOrders = await orderService.getStoreOrders(store.id);
+        const currentStoreId = finalStore.id;
+        setStoreId(currentStoreId);
+        const initialOrders = await orderService.getStoreOrders(currentStoreId);
         setOrders(initialOrders);
 
         // Subscribe to changes
-        const subscription = orderService.subscribeToOrders(store.id, (payload) => {
+        const subscription = orderService.subscribeToOrders(currentStoreId, (payload) => {
           if (payload.eventType === 'INSERT') {
             playNotification();
             toast.success("Novo pedido recebido! 🔔");
             // Refresh full list to get relations
-            orderService.getStoreOrders(store.id).then(setOrders);
+            orderService.getStoreOrders(currentStoreId).then(setOrders);
           } else if (payload.eventType === 'UPDATE') {
-             // Refresh to update status positions
-             orderService.getStoreOrders(store.id).then(setOrders);
+            // Refresh to update status positions
+            orderService.getStoreOrders(currentStoreId).then(setOrders);
           }
         });
 
@@ -95,24 +95,24 @@ export function OrderBoard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleStatusChange = async (order: Order, newStatusId: number) => {
-    const oldStatus = order.status_id;
+  const handleStatusChange = async (order: Order, newStatus: string) => {
+    const oldStatus = order.status;
     // Optimistic update
-    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status_id: newStatusId } : o));
-    
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+
     try {
-      await orderService.updateOrderStatus(order.id, newStatusId);
+      await orderService.updateOrderStatus(order.id, newStatus);
       toast.success("Status atualizado!");
     } catch (error) {
       // Revert on error
       console.error("Error updating status:", error);
-      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status_id: oldStatus } : o));
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: oldStatus } : o));
       toast.error("Erro ao atualizar status.");
     }
   };
 
-  const getOrdersByStatus = (statusId: number) => {
-    return orders.filter(o => o.status_id === statusId);
+  const getOrdersByStatus = (status: string) => {
+    return orders.filter(o => o.status === status);
   };
 
   if (loading) {
@@ -132,11 +132,11 @@ export function OrderBoard() {
   }
 
   const columns = [
-    { id: 1, label: "Pendentes", icon: <Inbox size={18} />, color: "text-yellow-600", bg: "bg-yellow-50" },
-    { id: 2, label: "Em Preparo", icon: <ChefHat size={18} />, color: "text-blue-600", bg: "bg-blue-50" },
-    { id: 3, label: "A Caminho", icon: <Bike size={18} />, color: "text-purple-600", bg: "bg-purple-50" },
-    { id: 4, label: "Concluídos", icon: <CheckCircle2 size={18} />, color: "text-green-600", bg: "bg-green-50" },
-    { id: 5, label: "Cancelados", icon: <XCircle size={18} />, color: "text-red-600", bg: "bg-red-50" },
+    { id: 'pending', label: "Pendentes", icon: <Inbox size={18} />, color: "text-yellow-600", bg: "bg-yellow-50" },
+    { id: 'preparing', label: "Em Preparo", icon: <ChefHat size={18} />, color: "text-blue-600", bg: "bg-blue-50" },
+    { id: 'out_for_delivery', label: "A Caminho", icon: <Bike size={18} />, color: "text-purple-600", bg: "bg-purple-50" },
+    { id: 'delivered', label: "Concluídos", icon: <CheckCircle2 size={18} />, color: "text-green-600", bg: "bg-green-50" },
+    { id: 'cancelled', label: "Cancelados", icon: <XCircle size={18} />, color: "text-red-600", bg: "bg-red-50" },
   ];
 
   return (
@@ -154,27 +154,27 @@ export function OrderBoard() {
 
       <div className="md:hidden">
         {/* Mobile View - Tabs */}
-        <Tabs defaultValue="1" className="w-full">
+        <Tabs defaultValue="pending" className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto">
             {columns.map(col => (
-               <TabsTrigger key={col.id} value={col.id.toString()} className="gap-2">
-                 {col.icon} {col.label}
-                 <span className="ml-1 bg-slate-100 px-1.5 rounded-full text-[10px]">{getOrdersByStatus(col.id).length}</span>
-               </TabsTrigger>
+              <TabsTrigger key={col.id} value={col.id} className="gap-2">
+                {col.icon} {col.label}
+                <span className="ml-1 bg-slate-100 px-1.5 rounded-full text-[10px]">{getOrdersByStatus(col.id).length}</span>
+              </TabsTrigger>
             ))}
           </TabsList>
           {columns.map(col => (
-            <TabsContent key={col.id} value={col.id.toString()} className="space-y-4">
+            <TabsContent key={col.id} value={col.id} className="space-y-4">
               {getOrdersByStatus(col.id).length === 0 ? (
                 <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                   Sem pedidos nesta etapa
                 </div>
               ) : (
                 getOrdersByStatus(col.id).map(order => (
-                  <OrderCard 
-                    key={order.id} 
-                    order={order} 
-                    onClick={() => setSelectedOrder(order)} 
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onClick={() => setSelectedOrder(order)}
                   />
                 ))
               )}
@@ -197,18 +197,18 @@ export function OrderBoard() {
             </div>
 
             <div className="flex-1 bg-slate-50/50 rounded-2xl p-2 space-y-3 border border-slate-100">
-               {getOrdersByStatus(col.id).map(order => (
-                  <OrderCard 
-                    key={order.id} 
-                    order={order} 
-                    onClick={() => setSelectedOrder(order)} 
-                  />
-               ))}
-               {getOrdersByStatus(col.id).length === 0 && (
-                 <div className="h-24 flex items-center justify-center text-slate-300 text-xs italic">
-                   Vazio
-                 </div>
-               )}
+              {getOrdersByStatus(col.id).map(order => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  onClick={() => setSelectedOrder(order)}
+                />
+              ))}
+              {getOrdersByStatus(col.id).length === 0 && (
+                <div className="h-24 flex items-center justify-center text-slate-300 text-xs italic">
+                  Vazio
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -218,9 +218,9 @@ export function OrderBoard() {
       <OrderDetailModal
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
-        onStatusChange={(newStatusId) => {
+        onStatusChange={(newStatus) => {
           if (selectedOrder) {
-            handleStatusChange(selectedOrder, newStatusId);
+            handleStatusChange(selectedOrder, newStatus);
           }
         }}
       />

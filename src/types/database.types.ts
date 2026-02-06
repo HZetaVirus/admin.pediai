@@ -103,21 +103,30 @@ export type Database = {
       }
       categories: {
         Row: {
+          description: string | null
+          icon: string | null
           id: number
           name: string
           position: number | null
+          slug: string
           store_id: string | null
         }
         Insert: {
+          description?: string | null
+          icon?: string | null
           id?: number
           name: string
           position?: number | null
+          slug: string
           store_id?: string | null
         }
         Update: {
+          description?: string | null
+          icon?: string | null
           id?: number
           name?: string
           position?: number | null
+          slug?: string
           store_id?: string | null
         }
         Relationships: [
@@ -358,6 +367,7 @@ export type Database = {
       products: {
         Row: {
           category_id: number | null
+          cost_price: number | null
           description: string | null
           id: number
           image_url: string | null
@@ -368,6 +378,7 @@ export type Database = {
         }
         Insert: {
           category_id?: number | null
+          cost_price?: number | null
           description?: string | null
           id?: number
           image_url?: string | null
@@ -378,6 +389,7 @@ export type Database = {
         }
         Update: {
           category_id?: number | null
+          cost_price?: number | null
           description?: string | null
           id?: number
           image_url?: string | null
@@ -402,6 +414,106 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      option_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          is_mandatory: boolean
+          max_selections: number | null
+          min_selections: number
+          name: string
+          store_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_mandatory?: boolean
+          max_selections?: number | null
+          min_selections?: number
+          name: string
+          store_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          is_mandatory?: boolean
+          max_selections?: number | null
+          min_selections?: number
+          name?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "option_groups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      product_options: {
+        Row: {
+          id: number
+          name: string
+          option_group_id: number | null
+          price: number
+        }
+        Insert: {
+          id?: number
+          name: string
+          option_group_id?: number | null
+          price: number
+        }
+        Update: {
+          id?: number
+          name?: string
+          option_group_id?: number | null
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_options_option_group_id_fkey"
+            columns: ["option_group_id"]
+            isOneToOne: false
+            referencedRelation: "option_groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      category_option_groups: {
+        Row: {
+          category_id: number
+          option_group_id: number
+        }
+        Insert: {
+          category_id: number
+          option_group_id: number
+        }
+        Update: {
+          category_id?: number
+          option_group_id?: number
+        }
+        Relationships: []
+      }
+      product_option_groups: {
+        Row: {
+          product_id: number
+          option_group_id: number
+        }
+        Insert: {
+          product_id: number
+          option_group_id: number
+        }
+        Update: {
+          product_id?: number
+          option_group_id?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

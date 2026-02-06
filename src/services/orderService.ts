@@ -3,11 +3,9 @@ import { Database } from "@/types/database.types";
 
 export type Order = Database["public"]["Tables"]["orders"]["Row"] & {
   order_items: (Database["public"]["Tables"]["order_items"]["Row"] & {
-    products: Database["public"]["Tables"]["products"]["Row"]
+    products: Database["public"]["Tables"]["products"]["Row"] | null // products can be null if deleted
   })[];
-  profiles: Database["public"]["Tables"]["profiles"]["Row"];
-  order_statuses: Database["public"]["Tables"]["order_statuses"]["Row"];
-  payment_types: Database["public"]["Tables"]["payment_types"]["Row"];
+  profiles: Database["public"]["Tables"]["profiles"]["Row"] | null; // profiles can be null (left join or optional)
 };
 
 export const orderService = {
@@ -15,7 +13,7 @@ export const orderService = {
    * Fetch active orders for a store (excluding completed/cancelled if needed, 
    * but for the board we usually want all active ones).
    */
-  async getStoreOrders(storeId: number) {
+  async getStoreOrders(storeId: string) {
     const { data, error } = await supabase
       .from("orders")
       .select(`
@@ -24,9 +22,7 @@ export const orderService = {
           *,
           products (*)
         ),
-        profiles (*),
-        order_statuses (*),
-        payment_types (*)
+        profiles (*)
       `)
       .eq("store_id", storeId)
       .order("created_at", { ascending: false }); // Newest first
@@ -42,10 +38,10 @@ export const orderService = {
   /**
    * Update the status of an order.
    */
-  async updateOrderStatus(orderId: number, statusId: number) {
+  async updateOrderStatus(orderId: number, status: string) {
     const { error } = await supabase
       .from("orders")
-      .update({ status_id: statusId })
+      .update({ status: status })
       .eq("id", orderId);
 
     if (error) {
@@ -58,7 +54,7 @@ export const orderService = {
    * Subscribe to real-time order updates for a specific store.
    * Returns the subscription object so it can be unsubscribed.
    */
-  subscribeToOrders(storeId: number, onUpdate: (payload: any) => void) {
+  subscribeToOrders(storeId: string, onUpdate: (payload: any) => void) {
     return supabase
       .channel('orders-channel')
       .on(
