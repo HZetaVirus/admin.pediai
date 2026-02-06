@@ -35,20 +35,9 @@ export default function SettingsPage() {
     try {
       const data = await settingsService.getStoreSettings();
       if (data) {
-        // Extract settings from JSON column
-        const settingsFromDb = (data.settings as any) || {};
-
-        // Merge top-level data with JSON settings for the form
-        const mergedSettings = {
-          ...data,
-          ...settingsFromDb
-        };
-
-        setSettings(mergedSettings as unknown as StoreSettings);
-
-        // Operating hours is always inside the settings JSON field
-        if (settingsFromDb.operating_hours) {
-          setOperatingHours(settingsFromDb.operating_hours as unknown as OperatingHours);
+        setSettings(data as StoreSettings);
+        if (data.operating_hours) {
+          setOperatingHours(data.operating_hours as unknown as OperatingHours);
         }
       }
     } catch (error) {

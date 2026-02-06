@@ -6,7 +6,6 @@ type Store = Database["public"]["Tables"]["stores"]["Row"];
 type StoreUpdate = Database["public"]["Tables"]["stores"]["Update"];
 
 export interface StoreSettings extends Partial<Store> {
-  operating_hours?: OperatingHours;
   delivery_fee?: number;
   min_order_value?: number;
   delivery_radius_km?: number;

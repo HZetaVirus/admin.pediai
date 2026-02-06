@@ -586,6 +586,7 @@ export type Database = {
           lat: number | null
           long: number | null
           name: string
+          operating_hours?: Json | null
           owner_id: string | null
           settings: Json | null
           slug: string
