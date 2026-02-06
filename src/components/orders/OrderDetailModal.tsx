@@ -128,7 +128,7 @@ export function OrderDetailModal({ order, onClose, onStatusChange }: OrderDetail
                     </div>
                   </div>
                   <span className="font-black text-primary">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.price * item.quantity)}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((item.unit_price || 0) * (item.quantity || 0))}
                   </span>
                 </div>
               ))}
