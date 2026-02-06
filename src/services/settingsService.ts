@@ -18,6 +18,11 @@ export interface StoreSettings extends Partial<Store> {
   notification_phone?: string;
   notification_email?: string;
   banner_url?: string;
+  // Previously top-level or now in settings JSON
+  phone?: string;
+  email?: string;
+  logo_url?: string;
+  theme_color?: string;
 }
 
 export interface OperatingHours {
@@ -37,7 +42,7 @@ export const settingsService = {
   async getStoreSettings(): Promise<Store | null> {
     const session = authService.getSession();
     const user = session?.user;
-    
+
     if (!user) {
       console.warn("User not authenticated");
       return null;
@@ -55,25 +60,58 @@ export const settingsService = {
     // 2. Fallback: Any visible store
     console.warn("[AUTH] Store settings not found by owner_id, trying fallback...");
     const { data: anyStore } = await supabase.from("stores").select("*").limit(1).single();
-    
+
     return anyStore || null;
   },
 
   /**
    * Update store settings
    */
-  async updateStoreSettings(settings: StoreUpdate): Promise<void> {
+  async updateStoreSettings(settingsUpdate: any): Promise<void> {
     const session = authService.getSession();
     const user = session?.user;
-    
+
     if (!user) {
       console.warn("User not authenticated");
       return;
     }
 
+    // 1. Get current settings to merge
+    const { data: currentStore } = await supabase
+      .from("stores")
+      .select("settings")
+      .eq("owner_id", user.id)
+      .single();
+
+    const currentSettings = (currentStore?.settings as any) || {};
+
+    // 2. Separate top-level columns from JSON settings
+    const {
+      name, description, link, is_open, category, address, slug, // Top-level columns
+      ...jsonSettings // Everything else goes into 'settings' JSON
+    } = settingsUpdate;
+
+    const dbUpdate: any = {};
+
+    // Add top-level fields if present
+    if (name !== undefined) dbUpdate.name = name;
+    if (description !== undefined) dbUpdate.description = description;
+    if (is_open !== undefined) dbUpdate.is_open = is_open;
+    if (category !== undefined) dbUpdate.category = category;
+    if (address !== undefined) dbUpdate.address = address;
+    if (slug !== undefined) dbUpdate.slug = slug;
+
+    // Merge JSON settings
+    if (Object.keys(jsonSettings).length > 0) {
+      dbUpdate.settings = {
+        ...currentSettings,
+        ...jsonSettings
+      };
+    }
+
     const { error } = await supabase
       .from("stores")
-      .update(settings)
+      .update(dbUpdate)
       .eq("owner_id", user.id);
 
     if (error) {
@@ -88,7 +126,7 @@ export const settingsService = {
   async uploadImage(file: File, bucket: string = "store-images"): Promise<string> {
     const session = authService.getSession();
     const user = session?.user;
-    
+
     if (!user) {
       console.warn("User not authenticated");
       throw new Error("User not authenticated");

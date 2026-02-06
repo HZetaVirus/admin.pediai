@@ -4,11 +4,11 @@ import React from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { settingsService, StoreSettings, OperatingHours } from "@/services/settingsService";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Store, 
-  Truck, 
-  CreditCard, 
-  Bell, 
+import {
+  Store,
+  Truck,
+  CreditCard,
+  Bell,
   Palette,
   Loader2,
   Save,
@@ -35,9 +35,19 @@ export default function SettingsPage() {
     try {
       const data = await settingsService.getStoreSettings();
       if (data) {
-        setSettings(data);
-        if (data.operating_hours) {
-          setOperatingHours(data.operating_hours as OperatingHours);
+        // Extract settings from JSON column
+        const settingsFromDb = (data.settings as any) || {};
+
+        // Merge top-level data with JSON settings for the form
+        const mergedSettings = {
+          ...data,
+          ...settingsFromDb
+        };
+
+        setSettings(mergedSettings as unknown as StoreSettings);
+
+        if (settingsFromDb.operating_hours) {
+          setOperatingHours(settingsFromDb.operating_hours as unknown as OperatingHours);
         }
       }
     } catch (error) {
@@ -53,8 +63,8 @@ export default function SettingsPage() {
     try {
       await settingsService.updateStoreSettings({
         ...settings,
-        operating_hours: operatingHours,
-      });
+        operating_hours: operatingHours as unknown as any,
+      } as any);
       toast.success("Configurações salvas com sucesso! ✨");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -342,7 +352,7 @@ export default function SettingsPage() {
                 {days.map(({ key, label }) => {
                   const dayKey = key as keyof OperatingHours;
                   const dayData = operatingHours[dayKey] || { open: '08:00', close: '22:00', closed: false };
-                  
+
                   return (
                     <div key={key} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
                       <span className="w-24 font-bold text-slate-700">{label}</span>
@@ -529,14 +539,14 @@ export default function SettingsPage() {
                         <p className="text-xs text-slate-500">{settings.description || 'Descrição da loja'}</p>
                       </div>
                     </div>
-                    <div 
+                    <div
                       className="h-2 rounded-full"
                       style={{ backgroundColor: settings.theme_color || '#10b981' }}
                     />
                     <div className="space-y-2">
                       <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                         <span className="text-sm font-medium">Produto Exemplo</span>
-                        <span 
+                        <span
                           className="font-black"
                           style={{ color: settings.theme_color || '#10b981' }}
                         >
