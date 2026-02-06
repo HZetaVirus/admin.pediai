@@ -2,13 +2,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  UtensilsCrossed, 
-  Smartphone, 
-  Mail, 
-  ArrowRight, 
-  Loader2, 
-  ShieldCheck, 
+import {
+  UtensilsCrossed,
+  Smartphone,
+  Mail,
+  ArrowRight,
+  Loader2,
+  ShieldCheck,
   ChevronLeft,
   MessageCircle,
   AlertCircle,
@@ -39,6 +39,13 @@ export default function LoginPage() {
 
   const [whatsappCode, setWhatsappCode] = useState<string | null>(null);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (authService.isAuthenticated()) {
+      router.replace('/');
+    }
+  }, [router]);
+
   // Auto-focus first OTP field
   useEffect(() => {
     if (step === "otp") {
@@ -49,7 +56,7 @@ export default function LoginPage() {
   const handleSendOTP = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!identifier) return toast.error("Por favor, informe seu e-mail ou WhatsApp.");
-    
+
     setLoading(true);
     const result = await authService.sendOTP(identifier);
     setLoading(false);
@@ -75,7 +82,7 @@ export default function LoginPage() {
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) value = value[value.length - 1];
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -116,7 +123,7 @@ export default function LoginPage() {
         <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md relative z-10"
@@ -154,8 +161,8 @@ export default function LoginPage() {
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors">
                         <Smartphone size={20} />
                       </div>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="(11) 99999-9999 ou seu@email.com"
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
@@ -164,7 +171,7 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     disabled={loading}
                     className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3 active:scale-[0.98]"
                   >
@@ -194,43 +201,43 @@ export default function LoginPage() {
                 className="space-y-8"
               >
                 <div className="flex items-center gap-4">
-                  <button 
+                  <button
                     onClick={() => setStep("identifier")}
                     className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/5 transition-all"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <div className="text-center space-y-3 mb-8">
-                  <h3 className="text-xl font-black text-slate-800">Verifique seu código</h3>
-                  <p className="text-slate-500 text-sm">Enviado para: {identifier}</p>
-                  
-                  {/* CÓDIGO VISUAL */}
-                  {whatsappCode && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl"
-                    >
-                      <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">Seu Código</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <p className="text-4xl font-black text-emerald-600 tracking-widest select-all">
-                          {whatsappCode}
-                        </p>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(whatsappCode);
-                            toast.success("Código copiado! 📋");
-                          }}
-                          className="p-2 hover:bg-emerald-100 rounded-lg transition-colors"
-                          title="Copiar código"
-                        >
-                          📋
-                        </button>
-                      </div>
-                      <p className="text-xs text-emerald-600 mt-2">Digite este código abaixo para fazer login</p>
-                    </motion.div>
-                  )}
-                </div>
+                    <h3 className="text-xl font-black text-slate-800">Verifique seu código</h3>
+                    <p className="text-slate-500 text-sm">Enviado para: {identifier}</p>
+
+                    {/* CÓDIGO VISUAL */}
+                    {whatsappCode && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl"
+                      >
+                        <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">Seu Código</p>
+                        <div className="flex items-center justify-center gap-2">
+                          <p className="text-4xl font-black text-emerald-600 tracking-widest select-all">
+                            {whatsappCode}
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(whatsappCode);
+                              toast.success("Código copiado! 📋");
+                            }}
+                            className="p-2 hover:bg-emerald-100 rounded-lg transition-colors"
+                            title="Copiar código"
+                          >
+                            📋
+                          </button>
+                        </div>
+                        <p className="text-xs text-emerald-600 mt-2">Digite este código abaixo para fazer login</p>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-6 gap-3">
@@ -261,7 +268,7 @@ export default function LoginPage() {
                     </motion.button>
                   )}
 
-                  <button 
+                  <button
                     onClick={handleVerifyOTP}
                     disabled={loading}
                     className="w-full py-4 bg-primary hover:bg-primary-dark text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-[0.98]"
@@ -277,7 +284,7 @@ export default function LoginPage() {
                   </button>
 
                   <div className="text-center">
-                    <button 
+                    <button
                       onClick={handleSendOTP}
                       disabled={resending}
                       className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors"
